@@ -5,19 +5,31 @@
 **Version**: 1.0.0 (increment the patch/fix version number if you make more commits past your first submission)
 
 ## Overview
-<!-- Provide a high level overview of what this application is and why you are building it, beyond the fact that it's an assignment for this class. (i.e. What's your problem domain?) -->
-
+This is a backend code and what it does basically, the user supposed to enter a city name, then weather and location on the map for this city will appear.
 ## Getting Started
-<!-- What are the steps that a user must take in order to build this app on their own machine and get it running? -->
+To run this code on your machine do the following:\
+1- After you clone the repo download **node** on your machine.\
+2- Run this command inside the repo directory `node server.js`.\
+4- Open your browser and enter the following link:`https://ltuc-asac.slack.com/archives/G01MGGL96KC/p1613912241003300`.\
+5- Enter this link `localhost:3000`.\
+6- Enter city name.
 
 ## Architecture
-<!-- Provide a detailed description of the application design. What technologies (languages, libraries, etc) you're using, and any other relevant design information. -->
-
+**Node.js**.\
+***Dependencies**:*Cors*: 2.8.5,*Dotenv*: 8.2.0,*Express*: 4.17.1
+ 
 ## Change Log
-<!-- Use this area to document the iterative changes made to your application as each feature is successfully implemented. Use time stamps. Here's an examples:
 
-01-01-2001 4:59pm - Application now has a fully-functional express server, with a GET route for the location resource.
+21-2-2021 9:00pm - Application now has a fully-functional express server, with a GET route for the location and weather resource.
 
 ## Credits and Collaborations
-<!-- Give credit (and a link) to other people or resources that helped you build this application. -->
--->
+
+Number and name of feature: Adding the weather.
+
+Estimate of time needed to complete: 2 hours.
+
+Start time: 3:10pm.
+
+Finish time: from 3:10pm to 5:15pm and from 8:00pm to 8:30pm.
+
+Actual time needed to complete: 2 hours and 35 minutes.
