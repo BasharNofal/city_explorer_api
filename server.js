@@ -9,50 +9,56 @@ require('dotenv').config();
 app.use(cors());
 const PORT = process.env.PORT;
 
-// 
+// ROUTES HANDLERS 
+
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
-
-// console.log(1);
-function handleWeather(req, res) {
-    let searchQuery = req.query;
-    let weatherAndDateObject = getWeatherData();
-    res.status(200).send(weatherAndDateObject);
-}
-
-function getWeatherData(searchQuery){
-
-    let arrayOfWeatherAndDate=[];
-    let locationWeatherAndDate = require('./data/weather.json');
-    
-    locationWeatherAndDate.data.forEach(element => {
-        
-        let forecast = element.weather.description;
-        let date = element.datetime;
-        console.log(date);
-        let newDateFormat = new Date(date).toString().slice(' ',15);
-        let newObject = new CityWeather(forecast, newDateFormat);
-        console.log(forecast);
-
-        arrayOfWeatherAndDate.push(newObject);
-        console.log(arrayOfWeatherAndDate);
-    });
-    return arrayOfWeatherAndDate;
-}
-
+app.get('*', handleWrongPath)
 
 
 // Handler functions
+
 function handleLocation(req, res) {
-    let searchQuery = req.query.city;
-    let locationObject = getLocationData(searchQuery);
-    res.status(200).send(locationObject);
+    try {
+        let searchQuery = req.query.city;
+        let locationObject = getLocationData(searchQuery);
+        res.status(200).send(locationObject);
+    } catch (error) {
+        res.status(500).send('An error occurred ' + error)
+    }
 }
 
-// Handle data function
+function handleWeather(req, res) {
+    try {
+        let searchQuery = req.query;
+        let weatherAndDateObject = getWeatherData();
+        res.status(200).send(weatherAndDateObject);
+    } catch (error) {
+        res.status(500).send('An error occurred '+ error)
+    }
+}
+
+
+// Handle data functions
+
+function getWeatherData(searchQuery) {
+
+    let locationWeatherAndDate = require('./data/weather.json');
+    let arrayOfWeatherAndDate = locationWeatherAndDate.data.map(element => {
+
+        let forecast = element.weather.description;
+        let date = element.datetime;
+        // console.log(date);
+        let newDateFormat = new Date(date).toString().slice(' ', 15);
+        return new CityWeather(forecast, newDateFormat);
+        // console.log(forecast);
+    });
+    console.log(arrayOfWeatherAndDate);
+    return arrayOfWeatherAndDate;
+}
+
 function getLocationData(searchQuery) {
-    // get the data array from the json   
-    console.log(1); 
+    // get the data array from the json    
     let locationData = require('./data/location.json');
 
     // Get values for object
@@ -63,6 +69,13 @@ function getLocationData(searchQuery) {
     // Create data object
     let responseObject = new CityLocation(searchQuery, displayName, latitude, longitude);
     return responseObject;
+}
+
+
+// WRONG PATH HANDLING FUNCTION
+
+function handleWrongPath(req, res) {
+    res.status(404).send('THE PATH THAT YOU TRYING TO REACH DOES NOT EXIST ');
 }
 
 // Constructors
@@ -81,3 +94,4 @@ function CityWeather(forecast, date) {
 app.listen(PORT, () => {
     console.log('this app is listening on port ' + PORT);
 });
+
