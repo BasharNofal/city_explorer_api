@@ -116,9 +116,9 @@ function getWeatherData(res) {
     })
 }
 
-function getParksData(res) {
-    let url = 
-}
+// function getParksData(res) {
+//     let url = 
+// }
 
 // WRONG PATH HANDLING FUNCTION
 
