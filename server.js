@@ -17,6 +17,7 @@ let superagent = require('superagent');
 // ROUTES HANDLERS 
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
+app.get('/parks',handleParks)
 app.get('*', handleWrongPath)
 
 
@@ -44,8 +45,45 @@ function handleWeather(req, res) {
     }
 }
 
+function handleParks(req,res) {
+    req.query;
+    getParksData(res).then(data=>{
+        res.status(200).send(data)
+    })
+}
 
 // Handle data functions
+
+
+function getLocationData(searchQuery,res) {
+    // get the data array from the API
+    
+    const query = {
+        key: process.env.GEOCODE_API_KEY,
+        q: searchQuery,
+        limit: '1',
+        format: 'json'
+    }
+    
+    let url = 'https://us1.locationiq.com/v1/search.php';
+    return superagent.get(url).query(query).then(data => {
+        try {
+            console.log(data.body);
+            let longitude = data.body[0].lon;
+            let latitude = data.body[0].lat;
+            let displayName = data.body[0].display_name;
+            
+            let responseObject = new CityLocation(searchQuery, displayName, latitude, longitude);
+            console.log(responseObject);
+            return responseObject;
+        } catch (error) {
+            res.status(500).send('An error occurred ' + error);
+        }
+        
+    }).catch(error => {
+        res.status(500).send('An error occurred while getting the data from API ' + error);
+    })
+}
 
 function getWeatherData(res) {
 
@@ -78,36 +116,9 @@ function getWeatherData(res) {
     })
 }
 
-function getLocationData(searchQuery,res) {
-    // get the data array from the API
-
-    const query = {
-        key: process.env.GEOCODE_API_KEY,
-        q: searchQuery,
-        limit: '1',
-        format: 'json'
-    }
-
-    let url = 'https://us1.locationiq.com/v1/search.php';
-    return superagent.get(url).query(query).then(data => {
-        try {
-            console.log(data.body);
-            let longitude = data.body[0].lon;
-            let latitude = data.body[0].lat;
-            let displayName = data.body[0].display_name;
-
-            let responseObject = new CityLocation(searchQuery, displayName, latitude, longitude);
-            console.log(responseObject);
-            return responseObject;
-        } catch (error) {
-            res.status(500).send('An error occurred ' + error);
-        }
-
-    }).catch(error => {
-        res.status(500).send('An error occurred while getting the data from API ' + error);
-    })
+function getParksData(res) {
+    let url = 
 }
-
 
 // WRONG PATH HANDLING FUNCTION
 
