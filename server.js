@@ -7,6 +7,8 @@ const pg = require('pg');
 let longitude = 0;
 let latitude = 0;
 let searchQuery = '';
+let offset = 0;
+let limit = 5;
 
 // initializations and configurations of the packages.
 const app = express();
@@ -23,6 +25,8 @@ app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
 app.get('/parks', handleParks);
 app.get('/movies',handleMovies);
+app.get('/yelp',handleYelp);
+
 app.get('*', handleWrongPath);
 
 
@@ -30,8 +34,7 @@ app.get('*', handleWrongPath);
 
 function handleLocation(req, res) {
     try {
-        searchQuery = req.query.city;
-        // console.log(req.query);
+        searchQuery = req.query.city;        // console.log(req.query);
         getLocationData(searchQuery, res).then(data => {
             res.status(200).send(data);
         })
@@ -43,8 +46,8 @@ function handleLocation(req, res) {
 function handleWeather(req, res) {
     try {
         // console.log('weather query ',req.query.city);
-        getWeatherData(res).then(info => {
-            res.status(200).send(info);
+        getWeatherData(res).then(data => {
+            res.status(200).send(data);
         });
     } catch (error) {
         res.status(500).send('An error occurred ' + error)
@@ -52,19 +55,25 @@ function handleWeather(req, res) {
 }
 
 function handleParks(req, res) {
-    getParksData(res,searchQuery).then(data => {
-        res.status(200).send(data)
+    getParksData(res).then(data => {
+        res.status(200).send(data);
     })
 }
 
 function handleMovies(req,res) {
     getMoviesData(res).then(data=>{
-        res.status(200).send(data)
+        res.status(200).send(data);
     })
 }
 
-// Handle data functions
+function handleYelp(req,res) {
+    getYelpData(res).then(data =>{
+        res.status(200).send(data);
+    })
+}
 
+
+// Handle data functions
 
 function getLocationData(searchQuery, res) {
     // get the data array from the API
@@ -101,19 +110,19 @@ function getLocationData(searchQuery, res) {
         } catch (error) {
             res.status(500).send('An error occurred ' + error);
         }
-
+        
     }).catch(error => {
         res.status(500).send('An error occurred while getting the data from API ' + error);
     })
 }
 
 function getWeatherData(res) {
-
+    
     const query = {
         key: process.env.WEATHER_API_KEY,
         lat: latitude,
         lon: longitude,
-        days: '3'
+        days: '10'
     }
 
     let url = 'https://api.weatherbit.io/v2.0/forecast/daily';
@@ -175,22 +184,79 @@ function getParksData(res) {
 
 function getMoviesData(res) {
     const query = {
-        api_key: process.env.MOVIE_API_KEY
+        api_key: process.env.MOVIE_API_KEY,
+        query: searchQuery
     }
-    let url = 'https://api.themoviedb.org/3/movie/550?'
+    // console.log(searchQuery);
+    let url = 'https://api.themoviedb.org/3/search/movie?'
     
-    superagent.get(url).then(data=>{
+    return superagent.get(url).query(query).then(info=>{
+        try {
+            // console.log(info.body);
+            let arrayOfMoviesInfo = info.body.results.map(element => {
+                let name = element.original_title;
+                let overview = element.overview;
+                let voteAverage = element.vote_average;
+                let voteCount = element.vote_count;
+                let imageUrl = element.poster_path;
+                let popularity = element.popularity;
+                let releaseDate = element.release_date; 
 
+                return new MoviesInfo(name, overview, voteAverage, voteCount, imageUrl, popularity, releaseDate);
+            })
+            // console.log(arrayOfMoviesInfo);
+            return arrayOfMoviesInfo;
+        } catch (error) {
+            res.status(500).send('an error occurred while getting data from API ' + error);
+        }
+
+    }).catch(error => {
+        res.status(500).send(error);
     })
 }
 
+function getYelpData(res) {
+
+    const query = {
+        location: searchQuery,
+        term: 'restaurants',
+        offset:offset,
+        limit:5,
+    }
+    let url= 'https://api.yelp.com/v3/businesses/search'
+    
+    return superagent.get(url).set('Authorization',`Bearer ${process.env.YELP_API_KEY}`).query(query).then(data=>{
+        try {
+            // console.log(info.body);
+            let arrayOfYelpInfo = data.body.businesses.map(element => {
+                let name = element.name;
+                let imageUrl = element.image_url;
+                let url = element.url;
+                let price = element.price;
+                let rating = element.rating; 
+
+                return new YelpInfo(name, imageUrl, price, rating, url);
+            })
+            offset += 5;
+
+            // console.log(offset,limit);
+            // console.log(arrayOfYelpInfo);
+            return arrayOfYelpInfo;
+        } catch (error) {
+            res.status(500).send('an error occurred while getting data from API ' + error);
+        }
+
+    }).catch(error => {
+        res.status(500).send(error);
+    })
+}
 // WRONG PATH HANDLING FUNCTION
 
 function handleWrongPath(req,res) {
     res.status(404).send('THE PATH THAT YOU TRYING TO REACH DOES NOT EXIST ');
 }
 
-let locationArray = [];
+
 // Constructors
 function CityLocation(searchQuery, displayName, lat, lon) {
     this.search_query = searchQuery;
@@ -212,6 +278,24 @@ function ParkInfo(name, address, fees, description, url) {
     this.fees = fees;
     this.description = description;
     this.url = url;
+}
+
+function MoviesInfo(name, overview, voteAverage, voteCount, imageUrl, popularity, releaseDate) {
+    this.title = name;
+    this.overview = overview;
+    this.average_votes = voteAverage;
+    this.total_votes = voteCount;
+    this.image_url = imageUrl;
+    this.popularity = popularity;
+    this.released_on = releaseDate;
+}
+
+function YelpInfo(name, imageUrl, price, rating, url) {
+    this.name = name;
+    this.image_url = imageUrl;
+    this.price = price; 
+    this.rating = rating;
+    this.url = url
 }
 
 app.listen(PORT, () => {
