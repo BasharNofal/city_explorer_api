@@ -2,7 +2,7 @@
 
 
 **Author**: Bashar Nofal
-**Version**: 1.1.0 
+**Version**: 1.3.1 
 
 ## Overview
 This is a backend code and what it does basically, the user supposed to enter a city name, then weather and location on the map for this city will appear.
