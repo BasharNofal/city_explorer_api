@@ -4,6 +4,9 @@
 const express = require('express');
 const cors = require('cors');
 const pg = require('pg');
+let longitude = 0;
+let latitude = 0;
+let searchQuery = '';
 
 // initializations and configurations of the packages.
 const app = express();
@@ -18,15 +21,17 @@ const client = new pg.Client({ connectionString: process.env.DATABASE_URL, ssl: 
 // ROUTES HANDLERS 
 app.get('/location', handleLocation);
 app.get('/weather', handleWeather);
-app.get('/parks', handleParks)
-app.get('*', handleWrongPath)
+app.get('/parks', handleParks);
+app.get('/movies',handleMovies);
+app.get('*', handleWrongPath);
 
 
 // Handler functions
 
 function handleLocation(req, res) {
     try {
-        let searchQuery = req.query.city;
+        searchQuery = req.query.city;
+        // console.log(req.query);
         getLocationData(searchQuery, res).then(data => {
             res.status(200).send(data);
         })
@@ -37,7 +42,7 @@ function handleLocation(req, res) {
 
 function handleWeather(req, res) {
     try {
-        req.query;
+        // console.log('weather query ',req.query.city);
         getWeatherData(res).then(info => {
             res.status(200).send(info);
         });
@@ -47,8 +52,13 @@ function handleWeather(req, res) {
 }
 
 function handleParks(req, res) {
-    req.query;
-    getParksData(res).then(data => {
+    getParksData(res,searchQuery).then(data => {
+        res.status(200).send(data)
+    })
+}
+
+function handleMovies(req,res) {
+    getMoviesData(res).then(data=>{
         res.status(200).send(data)
     })
 }
@@ -58,8 +68,6 @@ function handleParks(req, res) {
 
 function getLocationData(searchQuery, res) {
     // get the data array from the API
-
-
 
     const query = {
         key: process.env.GEOCODE_API_KEY,
@@ -71,13 +79,14 @@ function getLocationData(searchQuery, res) {
     let url = 'https://us1.locationiq.com/v1/search.php';
     return superagent.get(url).query(query).then(data => {
         try {
-            console.log(data.body);
+            // console.log(data.body);
             let longitude = data.body[0].lon;
             let latitude = data.body[0].lat;
             let displayName = data.body[0].display_name;
 
             let responseObject = new CityLocation(searchQuery, displayName, latitude, longitude);
             // console.log(responseObject);
+            // console.log(locationArray);
 
             let dbQuery = `INSERT INTO city_location(city_name,longitude,latitude) VALUES ($1,$2,$3) RETURNING *`;
             let safeValues = [displayName, longitude, latitude];
@@ -102,13 +111,13 @@ function getWeatherData(res) {
 
     const query = {
         key: process.env.WEATHER_API_KEY,
-        lat: '35.7796',
-        lon: '-78.6382',
+        lat: latitude,
+        lon: longitude,
         days: '3'
     }
 
     let url = 'https://api.weatherbit.io/v2.0/forecast/daily';
-
+    
     return superagent.get(url).query(query).then(info => {
         try {
             let arrayOfWeatherAndDate = info.body.data.map(element => {
@@ -130,27 +139,30 @@ function getWeatherData(res) {
 }
 
 function getParksData(res) {
-    // const query = {
-    //     key: process.env.PARKS_API_KEY,
-    //     parkCode: '200',
-    //     limit: '4',
-    //     q: 'seattle'
-    // }
-    let url = "https://developer.nps.gov/api/v1/parks?parkCode=200&limit=4&api_key=N1og32F6bjJp7kZ4eePVpz0tWTj8OxNq4t0Effvg&q=seattle";
+    const query = {
+        parkCode: '200',
+        api_key: process.env.PARKS_API_KEY,
+        limit: '4',
+        q: searchQuery
+    }
+    console.log(searchQuery);
+    let url = "https://developer.nps.gov/api/v1/parks";
 
-    return superagent.get(url).then(info => {
+    return superagent.get(url).query(query).then(info => {
         try {
+            // console.log(info.body);
             let arrayOfParksInfo = info.body.data.map(element => {
                 let name = element.fullName;
                 let description = element.description;
-                let fees = element.fees;
+                let fees = element.fees[0];
                 let address = element.addresses[0];
                 let url = element.url
 
-                // console.log({name},{address},{url},{fees},{description});
+                // console.log({name},{address},{url},{fees},{description}, 'parkks');
+                // console.log(new ParkInfo(name, address, fees, description, url));
                 return new ParkInfo(name, address, fees, description, url);
             })
-            console.log(arrayOfParksInfo);
+            // console.log(arrayOfParksInfo);
             return arrayOfParksInfo;
         } catch (error) {
             res.status(500).send('an error occurred while getting data from API ' + error);
@@ -159,21 +171,34 @@ function getParksData(res) {
     }).catch(error => {
         res.status(500).send(error);
     })
+}
 
+function getMoviesData(res) {
+    const query = {
+        api_key: process.env.MOVIE_API_KEY
+    }
+    let url = 'https://api.themoviedb.org/3/movie/550?'
+    
+    superagent.get(url).then(data=>{
+
+    })
 }
 
 // WRONG PATH HANDLING FUNCTION
 
-function handleWrongPath(req, res) {
+function handleWrongPath(req,res) {
     res.status(404).send('THE PATH THAT YOU TRYING TO REACH DOES NOT EXIST ');
 }
 
+let locationArray = [];
 // Constructors
 function CityLocation(searchQuery, displayName, lat, lon) {
     this.search_query = searchQuery;
     this.formatted_query = displayName;
     this.latitude = lat;
     this.longitude = lon;
+    latitude = lat;
+    longitude = lon;
 }
 
 function CityWeather(forecast, date) {
@@ -189,16 +214,16 @@ function ParkInfo(name, address, fees, description, url) {
     this.url = url;
 }
 
-// app.listen(PORT, () => {
-//     console.log('this app is listening on port ' + PORT);
-// });
+app.listen(PORT, () => {
+    console.log('this app is listening on port ' + PORT);
+});
 
-client.connect().then(() => {
-    app.listen(PORT, () => {
-        console.log('this app is listening on port ' + PORT);
-    });
-}).catch(error => {
-    console.log('An error occurred while getting data from the database ' + error);
-})
+// client.connect().then(() => {
+//     app.listen(PORT, () => {
+//         console.log('this app is listening on port ' + PORT);
+//     });
+// }).catch(error => {
+//     console.log('An error occurred while getting data from the database ' + error);
+// })
 
 
